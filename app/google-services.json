@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "661684747332",
+    "project_id": "sedapp-91516",
+    "storage_bucket": "sedapp-91516.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:661684747332:android:06a47c2c9af06ad6b75011",
+        "android_client_info": {
+          "package_name": "com.example.sedapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "661684747332-slq2fidubhtc2vaalf9a0b59st29pu7e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6S9oGeLpyr1ES4v0awNWW__LiyNWI1Pw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "661684747332-slq2fidubhtc2vaalf9a0b59st29pu7e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
