@@ -18,8 +18,8 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
-import com.example.sedapp.ui.theme.SedAppOrange
-import com.example.sedapp.ui.theme.WarmWhite
+import com.example.sedapp.core.ui.theme.SedAppOrange
+import com.example.sedapp.core.ui.theme.WarmWhite
 
 
 @Composable

@@ -1,0 +1,8 @@
+package com.example.sedapp.domain.usecase.auth
+
+import com.example.sedapp.domain.repository.AuthRepository
+import javax.inject.Inject
+
+class GoogleSignInUseCase @Inject constructor(private val repo: AuthRepository) {
+    suspend operator fun invoke(token: String) = repo.signInWithGoogle(token)
+}

@@ -50,24 +50,23 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sedapp.R
 import com.example.sedapp.presentation.auth.AuthUiState
 import com.example.sedapp.presentation.auth.AuthViewModel
-import com.example.sedapp.ui.theme.DeepOrange
-import com.example.sedapp.ui.theme.SedAppOrange
-import com.example.sedapp.ui.theme.TextFieldBackground
-import com.example.sedapp.ui.theme.WarmWhite
+import com.example.sedapp.core.ui.theme.DeepOrange
+import com.example.sedapp.core.ui.theme.PrimaryOrange
+import com.example.sedapp.core.ui.theme.SedAppOrange
+import com.example.sedapp.core.ui.theme.TextFieldBackground
+import com.example.sedapp.core.ui.theme.WarmWhite
 
 
 @Composable
 fun SignInScreen(
-    onBackClicked: () -> Unit = {},
     onSignUpClicked: () -> Unit = {},
     onSignInSuccess: () -> Unit = {},
     onGoogleSignInClick: () -> Unit = {},
-    viewModel: AuthViewModel = hiltViewModel()
+    viewModel: AuthViewModel
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -352,6 +351,6 @@ fun CustomOutlinedTextField(
 @Composable
 fun PreviewSignInScreen() {
     MaterialTheme {
-        SignInScreen()
+//        SignInScreen()
     }
 }

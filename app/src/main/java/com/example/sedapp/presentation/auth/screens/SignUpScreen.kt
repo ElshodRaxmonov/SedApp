@@ -25,22 +25,19 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sedapp.presentation.auth.AuthViewModel
 import com.example.sedapp.presentation.auth.AuthUiState
-import com.example.sedapp.ui.theme.DeepOrange
-import com.example.sedapp.ui.theme.TextFieldBackground
-
-// --- Reusable Colors based on the provided images ---
-val PrimaryOrange = Color(0xFFE76F00)
-val BackgroundPale = Color(0xFFFAF9F5)
+import com.example.sedapp.core.ui.theme.BackgroundPale
+import com.example.sedapp.core.ui.theme.DeepOrange
+import com.example.sedapp.core.ui.theme.PrimaryOrange
+import com.example.sedapp.core.ui.theme.TextFieldBackground
 
 @Composable
 fun SignUpScreen(
     onBackClicked: () -> Unit = {},
     onSignUpSuccess: () -> Unit = {},
-    viewModel: AuthViewModel = hiltViewModel()
+    viewModel: AuthViewModel
 ) {
     // State management for form inputs
     var name by remember { mutableStateOf("") }
@@ -273,7 +270,7 @@ fun CustomFlatTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
-    Column() {
+    Column {
         Text(
             text = titleField,
             modifier = Modifier
@@ -321,7 +318,7 @@ fun PasswordVisibilityToggle(isVisible: Boolean, onToggle: (Boolean) -> Unit) {
 @Composable
 fun PreviewSignUpScreen() {
     MaterialTheme {
-        SignUpScreen()
+//        SignUpScreen()
     }
 }
 // Custom

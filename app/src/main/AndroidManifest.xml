@@ -2,18 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
+        android:name=".app.App"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/sedapp_icon"
         android:label="@string/app_name"
-        android:name=".di.App"
         android:roundIcon="@mipmap/sedapp_icon_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SedApp">
         <activity
-            android:name=".MainActivity"
+            android:name=".core.ui.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.SedApp">

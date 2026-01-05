@@ -50,8 +50,10 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    // COil
+    implementation("io.coil-kt:coil-compose:2.6.0") // Check for the latest version
 
-
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     // Lottie animation
     implementation("com.airbnb.android:lottie-compose:6.7.1")
@@ -62,19 +64,23 @@ dependencies {
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
+// Check the latest version on the Android Developers documentation
+
     // Google Sign In
     implementation("com.google.android.gms:play-services-auth:21.4.0")
     // Hilt
     implementation("com.google.dagger:hilt-android:2.57.2")
     kapt("com.google.dagger:hilt-compiler:2.57.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
-
+    // Data Store
+    implementation("androidx.datastore:datastore-preferences:1.2.0")
 
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
