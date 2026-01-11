@@ -58,7 +58,7 @@ dependencies {
     // Lottie animation
     implementation("com.airbnb.android:lottie-compose:6.7.1")
     // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.7.5")
+    implementation("androidx.navigation:navigation-compose:2.9.6")
     // Icons
     implementation("androidx.compose.material:material-icons-extended:1.7.8") // Use the latest version
 
@@ -71,6 +71,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.4.0")
     // Hilt
     implementation("com.google.dagger:hilt-android:2.57.2")
+    implementation(libs.androidx.compose.animation)
     kapt("com.google.dagger:hilt-compiler:2.57.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
     // Data Store

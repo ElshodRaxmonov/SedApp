@@ -6,16 +6,21 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.example.sedapp.core.navigation.Routes
 import com.example.sedapp.presentation.dashboard.bag.BagScreen
 import com.example.sedapp.presentation.dashboard.home.HomeScreen
 import com.example.sedapp.presentation.dashboard.home.HomeViewModel
 import com.example.sedapp.presentation.dashboard.home.foods.FoodScreen
+import com.example.sedapp.presentation.dashboard.home.restaurants.RestaurantDetailsScreen
+import com.example.sedapp.presentation.dashboard.home.restaurants.RestaurantScreen
 import com.example.sedapp.presentation.dashboard.orders.OrdersScreen
 import com.example.sedapp.presentation.dashboard.profile.ProfileScreen
-import com.example.sedapp.presentation.dashboard.search.SearchScreen
+import com.example.sedapp.presentation.dashboard.home.search.SearchScreen
+
 
 fun NavGraphBuilder.dashboardGraph(
     rootNavController: NavHostController
@@ -35,8 +40,8 @@ fun NavGraphBuilder.dashboardGraph(
                     onSearchClicked = {
                         rootNavController.navigate(Routes.SEARCH)
                     },
-                    onRestaurantClicked = { restaurantId ->
-                        rootNavController.navigate(Routes.RESTAURANT_DETAILS + "/$restaurantId")
+                    onRestaurantClicked = { restaurantName -> // Changed from restaurantId
+                        rootNavController.navigate("${Routes.RESTAURANT_DETAILS}/$restaurantName")
                     },
                     onAllCategoriesClicked = {
                         rootNavController.navigate(Routes.FOODS)
@@ -73,9 +78,13 @@ fun NavGraphBuilder.dashboardGraph(
             }
         }
         composable(Routes.SEARCH) {
-            SearchScreen(onBackClicked = {
-                rootNavController.popBackStack()
-            }
+            SearchScreen(
+                onBackClicked = {
+                    rootNavController.popBackStack()
+                },
+                onRestaurantClick = { name ->
+                    rootNavController.navigate("${Routes.RESTAURANT_DETAILS}/$name")
+                }
             )
         }
         composable(Routes.FOODS) {
@@ -83,5 +92,29 @@ fun NavGraphBuilder.dashboardGraph(
                 rootNavController.popBackStack()
             })
         }
+
+        composable(Routes.RESTAURANT) {
+            RestaurantScreen(
+                onBackClicked = {
+                    rootNavController.popBackStack()
+                },
+
+                onRestaurantClick = { name ->
+                    rootNavController.navigate("${Routes.RESTAURANT_DETAILS}/$name")
+                }
+            )
+        }
+        composable(
+            route = "${Routes.RESTAURANT_DETAILS}/{restaurantName}",
+            arguments = listOf(navArgument("restaurantName") { type = NavType.StringType })
+        ) {
+            RestaurantDetailsScreen(
+                onBackClicked = {
+                    rootNavController.popBackStack()
+                },
+                onBagClicked = { }
+            )
+        }
+
     }
 }

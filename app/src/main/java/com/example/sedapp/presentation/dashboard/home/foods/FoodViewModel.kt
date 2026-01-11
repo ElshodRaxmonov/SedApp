@@ -5,58 +5,114 @@ import androidx.lifecycle.viewModelScope
 import com.example.sedapp.domain.model.Category
 import com.example.sedapp.domain.model.Food
 import com.example.sedapp.domain.usecase.GetCategoriesUseCase
-import com.example.sedapp.domain.usecase.GetFoodsUseCase
+import com.example.sedapp.domain.usecase.bag.AddItemToBagUseCase
+import com.example.sedapp.domain.usecase.bag.ObserveBagItemsUseCase
+import com.example.sedapp.domain.usecase.bag.UpdateItemQuantityUseCase
+import com.example.sedapp.domain.usecase.home.food.GetFoodsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
+
+data class FoodItemState(
+    val food: Food,
+    val quantity: Int = 0
+)
 
 data class FoodUiState(
     val isLoading: Boolean = false,
-    val categories: List<Category> = emptyList(),
-    val foods: List<Food> = emptyList(),
+    val availableCategories: List<Category> = emptyList(),
+    val displayedFoods: List<FoodItemState> = emptyList(),
+    val selectedCategoryNames: Set<String> = emptySet(),
+    val isHalalOnly: Boolean = false,
     val errorMessage: String? = null
 )
 
 @HiltViewModel
 class FoodViewModel @Inject constructor(
     private val getFoodsUseCase: GetFoodsUseCase,
-    private val getCategoriesUseCase: GetCategoriesUseCase
+    private val getCategoriesUseCase: GetCategoriesUseCase,
+    private val addItemToBagUseCase: AddItemToBagUseCase,
+    private val observeBagItemsUseCase: ObserveBagItemsUseCase,
+    private val updateItemQuantityUseCase: UpdateItemQuantityUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(FoodUiState(isLoading = true))
-    val uiState = _uiState.asStateFlow()
+    private val _allFoods = MutableStateFlow<List<Food>>(emptyList())
+    private val _categories = MutableStateFlow<List<Category>>(emptyList())
+    private val _filterState = MutableStateFlow(FilterState())
+
+    data class FilterState(
+        val selectedCategories: Set<String> = emptySet(),
+        val isHalalOnly: Boolean = false
+    )
+
+    val uiState: StateFlow<FoodUiState> = combine(
+        _allFoods,
+        _categories,
+        _filterState,
+        observeBagItemsUseCase()
+    ) { foods, categories, filters, bagItems ->
+        val bagMap = bagItems.associateBy({ it.food.foodId }, { it.quantity })
+        
+        val filteredFoods = foods.filter { food ->
+            val matchesHalal = !filters.isHalalOnly || food.isHalal
+            val matchesCategory = filters.selectedCategories.isEmpty() || food.category in filters.selectedCategories
+            matchesHalal && matchesCategory
+        }.map { FoodItemState(it, bagMap[it.foodId] ?: 0) }
+
+        FoodUiState(
+            isLoading = false,
+            availableCategories = categories,
+            displayedFoods = filteredFoods,
+            selectedCategoryNames = filters.selectedCategories,
+            isHalalOnly = filters.isHalalOnly
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FoodUiState(isLoading = true))
 
     init {
-        loadFoodData()
+        loadInitialData()
     }
 
-    private fun loadFoodData() {
+    private fun loadInitialData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {
-                coroutineScope {
-                    val foodsDeferred = async { getFoodsUseCase() }
-                    val categoriesDeferred = async { getCategoriesUseCase() }
-
-                    _uiState.value = FoodUiState(
-                        isLoading = false,
-                        foods = foodsDeferred.await(),
-                        categories = categoriesDeferred.await()
-                    )
-                }
-            } catch (e: CancellationException) {
-                throw e
+                _allFoods.value = getFoodsUseCase()
+                _categories.value = getCategoriesUseCase()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = e.message ?: "Failed to load data"
-                )
+                // Handle error
             }
+        }
+    }
+
+    fun onCategorySelected(categoryName: String) {
+        _filterState.update { state ->
+            val newSelected = if (categoryName in state.selectedCategories) {
+                state.selectedCategories - categoryName
+            } else {
+                state.selectedCategories + categoryName
+            }
+            state.copy(selectedCategories = newSelected)
+        }
+    }
+
+    fun onHalalFilterChanged(isHalal: Boolean) {
+        _filterState.update { it.copy(isHalalOnly = isHalal) }
+    }
+
+    fun addToBag(food: Food, quantity: Int) {
+        viewModelScope.launch {
+            addItemToBagUseCase(food, quantity)
+        }
+    }
+
+    fun updateQuantity(foodId: String, delta: Int, currentQty: Int) {
+        viewModelScope.launch {
+            updateItemQuantityUseCase(foodId, currentQty + delta)
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.example.sedapp.domain.usecase
+package com.example.sedapp.domain.usecase.home.food
 
 import com.example.sedapp.domain.model.Food
 import com.example.sedapp.domain.repository.FoodRepository

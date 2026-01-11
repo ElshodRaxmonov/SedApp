@@ -15,10 +15,11 @@ data class Category(
 data class Restaurant(
     val restaurantId: String,
     val location: String,
-    val rating: Double,
+    val rating:Double,
     val name: String,
     val cuisine: String,
-    val images: List<String>
+    val images: List<String>,
+    val description: String
 )
 
 data class Food(
@@ -29,10 +30,13 @@ data class Food(
     val image: String,
     val isHalal: Boolean,
     val category: String,
-    val available: Boolean,
+    val time: Int,
+    val rating: Double,
+    val restaurant: String
 )
 
 data class OrderedItem(
+    val itemId: String,
     val food: Food,
     val quantity: Int
 )
@@ -44,3 +48,7 @@ data class Order(
     val createdAt: Long,
     val userId: String
 )
+enum class OrderType {
+    DELIVERY,
+    PRE_ORDER
+}

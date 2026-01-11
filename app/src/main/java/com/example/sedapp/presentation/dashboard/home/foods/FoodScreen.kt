@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -50,11 +51,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.sedapp.R
 import com.example.sedapp.core.ui.theme.SedAppOrange
 import com.example.sedapp.core.ui.theme.SoftGold
@@ -68,72 +73,20 @@ import kotlinx.coroutines.launch
 @Preview
 @Composable
 fun FoodScreenPreview() {
-
     val uiStateMock = FoodUiState(
         false, listOf(
             Category(1, "Meal", false),
             Category(2, "Drink", false),
             Category(3, "Bake", false),
             Category(4, "Snack", false)
-        ), listOf(
-            Food(
-                "1",
-                "Burger",
-                "Delicious burger",
-                10.0,
-                "https://example.com/burger.jpg",
-                true,
-                "Meal",
-                true
-            ), Food(
-                "2",
-                "Burger",
-                "Delicious burger",
-                10.0,
-                "https://example.com/burger.jpg",
-                true,
-                "Meal",
-                true
-            ), Food(
-                "3",
-                "Burger",
-                "Delicious burger",
-                10.0,
-                "https://example.com/burger.jpg",
-                true,
-                "Drink",
-                true
-            ),Food(
-                "2",
-                "Burger",
-                "Delicious burger",
-                10.0,
-                "https://example.com/burger.jpg",
-                true,
-                "Meal",
-                true
-            ),Food(
-                "2",
-                "Burger",
-                "Delicious burger",
-                10.0,
-                "https://example.com/burger.jpg",
-                true,
-                "Meal",
-                true
-            ),Food(
-                "2",
-                "Burger",
-                "Delicious burger",
-                10.0,
-                "https://example.com/burger.jpg",
-                true,
-                "Meal",
-                true
-            )
-        )
+        ), listOf(/*...foods...*/)
     )
-    FoodScreenContent(uiState = uiStateMock, onBackClicked = {})
+    FoodScreenContent(
+        uiState = uiStateMock,
+        onBackClicked = {},
+        onCategorySelected = {},
+        onHalalFilterChanged = {},
+        onAddToBag = { _, _ -> })
 }
 
 
@@ -142,21 +95,27 @@ fun FoodScreen(
     onBackClicked: () -> Unit, viewModel: FoodViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
     FoodScreenContent(
-        uiState = uiState, onBackClicked = onBackClicked
+        uiState = uiState,
+        onBackClicked = onBackClicked,
+        onCategorySelected = viewModel::onCategorySelected,
+        onHalalFilterChanged = viewModel::onHalalFilterChanged,
+        onAddToBag = viewModel::addToBag
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoodScreenContent(
-    uiState: FoodUiState, onBackClicked: () -> Unit
+    uiState: FoodUiState,
+    onBackClicked: () -> Unit,
+    onCategorySelected: (String) -> Unit,
+    onHalalFilterChanged: (Boolean) -> Unit,
+    onAddToBag: (Food, Int) -> Unit
 ) {
     var selectedFood by remember { mutableStateOf<Food?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
-
 
     Scaffold(
         topBar = {
@@ -170,12 +129,9 @@ fun FoodScreenContent(
                     contentDescription = "SedApp icon",
                     modifier = Modifier.padding(end = 16.dp)
                 )
-            },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-
-        },
-
-        ) { paddingValues ->
+            })
+        }
+    ) { paddingValues ->
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -198,11 +154,17 @@ fun FoodScreenContent(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    CategoriesSection(categories = uiState.categories, onCategorySelected = {})
-                    Spacer(modifier = Modifier.height(24.dp))
+                    CategoriesSection(
+                        categories = uiState.availableCategories,
+                        selectedCategories = uiState.selectedCategoryNames,
+                        onCategorySelected = onCategorySelected,
+                        isHalalOnly = uiState.isHalalOnly,
+                        onHalalFilterChanged = onHalalFilterChanged
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
 
-                val groupedFoods = uiState.foods.groupBy { it.category }
+                val groupedFoods = uiState.displayedFoods.groupBy { it.food.category }
                 groupedFoods.forEach { (category, foodsInCategory) ->
                     item {
                         Text(
@@ -212,21 +174,21 @@ fun FoodScreenContent(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    item {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    items(foodsInCategory.chunked(2)) { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            items(foodsInCategory.chunked(2)) { columnItems ->
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                                ) {
-                                    columnItems.forEach { food ->
-                                        FoodItem(food = food, onFoodClicked = {
-                                            selectedFood = it
-                                            scope.launch { sheetState.show() }
-                                        })
-                                    }
+                            rowItems.forEach { itemState ->
+                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                    FoodItem(food = itemState.food, onFoodClicked = {
+                                        selectedFood = it
+                                        scope.launch { sheetState.show() }
+                                    })
                                 }
+                            }
+                            if (rowItems.size < 2) {
+                                Spacer(Modifier.weight(1f))
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
@@ -239,31 +201,41 @@ fun FoodScreenContent(
             ModalBottomSheet(
                 onDismissRequest = { selectedFood = null }, sheetState = sheetState
             ) {
-                FoodDetailsSheet(food = selectedFood!!)
+                FoodDetailsSheet(
+                    food = selectedFood!!,
+                    onAddToCart = { qty ->
+                        onAddToBag(selectedFood!!, qty)
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            selectedFood = null
+                        }
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun CategoriesSection(categories: List<Category>, onCategorySelected: (Category) -> Unit) {
+fun CategoriesSection(
+    categories: List<Category>,
+    selectedCategories: Set<String>,
+    onCategorySelected: (String) -> Unit,
+    isHalalOnly: Boolean,
+    onHalalFilterChanged: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        var checked by remember { mutableStateOf(true) }
-
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(categories) { category ->
-
+                val isSelected = category.name in selectedCategories
                 FilterChip(
-                    selected = category.isCategorySelected,
-                    onClick = {
-                        category.isCategorySelected = !category.isCategorySelected
-                    },
+                    selected = isSelected,
+                    onClick = { onCategorySelected(category.name) },
                     label = { Text(category.name) },
-                    leadingIcon = if (category.isCategorySelected) {
+                    leadingIcon = if (isSelected) {
                         {
                             Icon(
                                 imageVector = Icons.Filled.Done,
@@ -278,15 +250,18 @@ fun CategoriesSection(categories: List<Category>, onCategorySelected: (Category)
         }
 
         Switch(
-            checked = checked, onCheckedChange = { checked = it }, colors = SwitchDefaults.colors(
+            checked = isHalalOnly,
+            onCheckedChange = onHalalFilterChanged,
+            colors = SwitchDefaults.colors(
                 checkedThumbColor = WarmWhite,
                 checkedTrackColor = SedAppOrange,
                 uncheckedThumbColor = WarmWhite,
                 uncheckedTrackColor = SoftGold
-            ), thumbContent = {
+            ),
+            thumbContent = {
                 Icon(
                     painter = painterResource(
-                        if (checked) R.drawable.halal else R.drawable.not_halal
+                        if (isHalalOnly) R.drawable.halal else R.drawable.not_halal
                     ),
                     contentDescription = null,
                     tint = Color.Unspecified,
@@ -296,29 +271,27 @@ fun CategoriesSection(categories: List<Category>, onCategorySelected: (Category)
     }
 }
 
-
-
 @Composable
-fun FoodDetailsSheet(food: Food) {
+fun FoodDetailsSheet(
+    food: Food,
+    onAddToCart: (Int) -> Unit
+) {
     var quantity by remember { mutableStateOf(1) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.LightGray)
+                .clip(RoundedCornerShape(18.dp))
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_launcher_background),
-                contentDescription = null,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 8.dp)
+            AsyncImage(
+                model = food.image,
+                contentDescription = food.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
             IconButton(
                 onClick = { /*TODO*/ },
@@ -330,85 +303,151 @@ fun FoodDetailsSheet(food: Food) {
                 Icon(Icons.Default.Favorite, contentDescription = "Favorite", tint = Color.Red)
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Burger Bistro",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_launcher_background),
-                contentDescription = "rating"
-            )
-            Text(text = "4.7", modifier = Modifier.padding(start = 4.dp))
-            Spacer(modifier = Modifier.width(16.dp))
-            Image(
-                painter = painterResource(id = R.drawable.sedapp_logo),
-                contentDescription = "Halal",
-                modifier = Modifier.size(24.dp)
-            )
-            Text(text = "Halal", modifier = Modifier.padding(start = 4.dp))
-            Spacer(modifier = Modifier.width(16.dp))
-            Icon(
-                painter = painterResource(id = R.drawable.ic_launcher_background),
-                contentDescription = "time"
-            )
-            Text(text = "20 min", modifier = Modifier.padding(start = 4.dp))
-            Spacer(modifier = Modifier.weight(1f))
-            Text(text = "Astana", color = MaterialTheme.colorScheme.primary)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Maecenas sed diam eget risus varius blandit sit amet non magna. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "$${food.price}", // Using the food object's price
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold
-            )
+
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .background(
-                        Color.DarkGray, RoundedCornerShape(24.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { if (quantity > 1) quantity-- }) {
-                    Icon(Icons.Default.Remove, contentDescription = "Remove", tint = Color.White)
-                }
+
                 Text(
-                    text = "$quantity",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    color = Color.White
+                    text = food.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = { quantity++ }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                Row(
+                    modifier = Modifier.padding(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.restaurant_icon),
+                        contentDescription = "Restaurant Icon",
+                        modifier = Modifier.size(24.dp),
+                        tint = Color.Unspecified
+                    )
+                    Text(
+                        text = food.restaurant,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.rating_star),
+                    contentDescription = "rating",
+                    tint = SedAppOrange
+                )
+                Text(
+                    text = food.rating.toString(),
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Icon(
+                    painter = painterResource(id = R.drawable.halal_or_not),
+                    contentDescription = "Halal",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified
+                )
+                Text(
+                    text = if (food.isHalal) {
+                        "Halal"
+                    } else {
+                        "Not Halal"
+                    }, modifier = Modifier.padding(start = 4.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Icon(
+                    painter = painterResource(id = R.drawable.ready_time),
+                    contentDescription = "time",
+                    tint = SedAppOrange
+                )
+                Text(text = "${food.time} min", modifier = Modifier.padding(start = 4.dp))
+                Spacer(modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = food.description,
+                fontSize = 14.sp,
+                color = Color(0xFFA0A5BA),
+                fontFamily = FontFamily.SansSerif
+            )
         }
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = { /* TODO: Add to cart logic */ },
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp)
+                .clip(RoundedCornerShape(16.dp, 16.dp))
+                .background(
+                    WarmWhite
+                )
         ) {
-            Text(text = "ADD TO CART", style = MaterialTheme.typography.titleMedium)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "$${food.price}",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .background(
+                                Color.DarkGray, RoundedCornerShape(24.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        IconButton(onClick = { if (quantity > 1) quantity-- }) {
+                            Icon(
+                                Icons.Default.Remove,
+                                contentDescription = "Remove",
+                                tint = Color.White
+                            )
+                        }
+                        Text(
+                            text = "$quantity",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            color = Color.White
+                        )
+                        IconButton(onClick = { quantity++ }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { onAddToCart(quantity) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SedAppOrange,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(text = "ADD TO CART", style = MaterialTheme.typography.titleMedium)
+                }
+            }
         }
     }
 }

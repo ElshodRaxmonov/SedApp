@@ -35,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -54,7 +55,7 @@ import com.example.sedapp.domain.model.Restaurant
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel(), // Helper needed or mock it
+    viewModel: HomeViewModel = hiltViewModel(),
     onSearchClicked: () -> Unit,
     onRestaurantClicked: (String) -> Unit,
     onAllCategoriesClicked: () -> Unit,
@@ -71,7 +72,6 @@ fun HomeScreen(
         onAllCategoriesClicked = onAllCategoriesClicked,
         onAllRestaurantsClicked = onAllRestaurantsClicked,
         onCategoryClicked = onCategoryClicked
-
     )
 }
 
@@ -130,8 +130,7 @@ fun HomeScreenContent(
             }
 
             if (state.isLoading) {
-                items(3) { // Show 3 shimmer placeholders
-//                    ShimmerRestaurantCardPlaceholder() // You would need to create this composable
+                items(3) { 
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             } else if (state.restaurants.isEmpty()) {
@@ -142,7 +141,7 @@ fun HomeScreenContent(
                 items(state.restaurants) { restaurant ->
                     RestaurantCard(
                         restaurant = restaurant,
-                        onClick = { onRestaurantClicked(restaurant.restaurantId) }
+                        onClick = { onRestaurantClicked(restaurant.name) } // Fix: Passing name instead of ID to match Detail Screen expectations
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -165,7 +164,6 @@ fun HomeHeader(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Using Icon instead of R.drawable to ensure Preview works
             Icon(
                 painter = painterResource(com.example.sedapp.R.drawable.sedapp_logo),
                 contentDescription = "Logo",
@@ -224,14 +222,15 @@ fun SectionHeader(title: String, onSeeAllClicked: () -> Unit) {
 }
 
 @Composable
-fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
+fun RestaurantCard(
+                   restaurant: Restaurant, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column {
             AsyncImage(
@@ -241,7 +240,9 @@ fun RestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
                 error = ColorPainter(Color.LightGray),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp),
+                    .height(160.dp).clip(
+                        RoundedCornerShape(24.dp)
+                    ),
                 contentScale = ContentScale.Crop
             )
 
@@ -303,9 +304,6 @@ fun HomeSearchBar(onClick: () -> Unit) {
     }
 }
 
-// ==========================================
-// PREVIEW
-// ==========================================
 @Preview(showBackground = true, name = "Home Screen Preview")
 @Composable
 fun PreviewHomeScreen() {
@@ -322,8 +320,9 @@ fun PreviewHomeScreen() {
                 name = "Rose Garden",
                 cuisine = "Chinese • $$",
                 rating = 4.7,
-                images = emptyList(), // Empty list is fine, AsyncImage handles it
-                location = "123 Main St"
+                images = emptyList(),
+                location = "123 Main St",
+                description = "This is a description"
             ),
             Restaurant(
                 restaurantId = "2",
@@ -331,7 +330,8 @@ fun PreviewHomeScreen() {
                 cuisine = "Fastfood • $",
                 rating = 4.2,
                 images = emptyList(),
-                location = "456 Broad St"
+                location = "456 Broad St",
+                description = "dsssssssssssssssssss"
             )
         )
         val state = HomeUiState(

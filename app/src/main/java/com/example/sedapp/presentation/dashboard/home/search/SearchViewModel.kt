@@ -7,47 +7,82 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sedapp.domain.model.Food
 import com.example.sedapp.domain.model.Restaurant
+import com.example.sedapp.domain.usecase.home.FoodSearchUseCase
+import com.example.sedapp.domain.usecase.home.RestaurantSearchUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// File: ui/search/SearchViewModel.kt
 sealed class SearchUiState {
     object Idle : SearchUiState()
     object Loading : SearchUiState()
-    data class Success(val results: List<Restaurant>, val foods:List<Food>) : SearchUiState()
-    object NotFound : SearchUiState() // Explicit state for the image provided
+    data class Success(val results: List<Restaurant>, val foods: List<Food>) : SearchUiState()
+    object NotFound : SearchUiState()
 }
 
 @HiltViewModel
-class SearchViewModel @Inject constructor() : ViewModel() {
+class SearchViewModel @Inject constructor(
+    private val foodSearchUseCase: FoodSearchUseCase,
+    private val restaurantSearchUseCase: RestaurantSearchUseCase
+) : ViewModel() {
     var searchQuery by mutableStateOf("")
         private set
 
     private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
+    private var searchJob: Job? = null
+
     fun onQueryChange(newQuery: String) {
         searchQuery = newQuery
-        // If query is cleared, go back to Idle
+        searchJob?.cancel()
+        
         if (newQuery.isBlank()) {
             _uiState.value = SearchUiState.Idle
+        } else {
+            // Automatic search with debounce for better UX
+            searchJob = viewModelScope.launch {
+                delay(500)
+                performSearch()
+            }
         }
     }
 
     fun performSearch() {
-        if (searchQuery.isBlank()) return
+        val query = searchQuery.trim()
+        if (query.isBlank()) return
 
+        searchJob?.cancel()
         viewModelScope.launch {
             _uiState.value = SearchUiState.Loading
-            // Simulate API/Firestore call
-            delay(1000)
-
-            // Logic: if search doesn't match anything, set to NotFound
-            _uiState.value = SearchUiState.NotFound
+            try {
+                // Try searching with the exact query and also with first letter capitalized 
+                // to mitigate Firestore's case-sensitivity issues
+                val normalizedQuery = query.replaceFirstChar { it.uppercase() }
+                
+                val results = restaurantSearchUseCase(normalizedQuery)
+                val foods = foodSearchUseCase(normalizedQuery)
+                
+                _uiState.value = if (results.isNotEmpty() || foods.isNotEmpty()) {
+                    SearchUiState.Success(results, foods)
+                } else {
+                    // Fallback to exact query if normalization didn't work
+                    val exactResults = restaurantSearchUseCase(query)
+                    val exactFoods = foodSearchUseCase(query)
+                    
+                    if (exactResults.isNotEmpty() || exactFoods.isNotEmpty()) {
+                        SearchUiState.Success(exactResults, exactFoods)
+                    } else {
+                        SearchUiState.NotFound
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.value = SearchUiState.NotFound
+            }
         }
     }
 }

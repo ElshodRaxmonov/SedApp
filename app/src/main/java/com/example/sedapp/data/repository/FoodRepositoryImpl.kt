@@ -1,9 +1,12 @@
 package com.example.sedapp.data.repository
 
+import android.util.Log
 import com.example.sedapp.domain.model.Food
 import com.example.sedapp.domain.repository.FoodRepository
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import org.w3c.dom.Document
 import javax.inject.Inject
 
 class FoodRepositoryImpl @Inject constructor(
@@ -12,10 +15,29 @@ class FoodRepositoryImpl @Inject constructor(
 
     override suspend fun getFoods(): List<Food> {
         return try {
-            firestore.collection("foods").get().await().toObjects(Food::class.java)
+            firestore.collection("foods").get().await().documents.mapNotNull { doc ->
+                doc.toFoodObject()
+            }
         } catch (e: Exception) {
-            // In a real app, you'd want to log this error
+
+            Log.d("in usecase", "getFoods: ${e.message}")
             emptyList()
         }
+    }
+
+    public fun DocumentSnapshot.toFoodObject(): Food {
+
+        return Food(
+            name = getString("name") ?: "",
+            description = getString("description") ?: "",
+            price = getDouble("price") ?: 0.0,
+            image = getString("image") ?: "",
+            isHalal = getBoolean("isHalal") ?: false,
+            category = getString("category") ?: "",
+            time = getLong("time")?.toInt() ?: 0,
+            rating = getDouble("rating") ?: 0.0,
+            restaurant = getString("restaurant") ?: "",
+            foodId = id
+        )
     }
 }
