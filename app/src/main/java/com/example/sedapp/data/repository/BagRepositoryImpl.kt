@@ -13,7 +13,7 @@ import javax.inject.Singleton
 
 @Singleton
 class BagRepositoryImpl @Inject constructor() : BagRepository {
-    
+
     private val _bagItems = MutableStateFlow<List<OrderedItem>>(emptyList())
 
     override fun observeBagItems(): Flow<List<OrderedItem>> = _bagItems.asStateFlow()
@@ -22,8 +22,8 @@ class BagRepositoryImpl @Inject constructor() : BagRepository {
         _bagItems.update { currentItems ->
             val existingItem = currentItems.find { it.food.foodId == food.foodId }
             if (existingItem != null) {
-                currentItems.map { 
-                    if (it.food.foodId == food.foodId) it.copy(quantity = it.quantity + quantity) else it 
+                currentItems.map {
+                    if (it.food.foodId == food.foodId) it.copy(quantity = it.quantity + quantity) else it
                 }
             } else {
                 currentItems + OrderedItem(
@@ -37,8 +37,8 @@ class BagRepositoryImpl @Inject constructor() : BagRepository {
 
     override suspend fun updateQuantity(foodId: String, newQuantity: Int) {
         _bagItems.update { currentItems ->
-            currentItems.map { 
-                if (it.food.foodId == foodId) it.copy(quantity = newQuantity) else it 
+            currentItems.map {
+                if (it.food.foodId == foodId) it.copy(quantity = it.quantity + newQuantity) else it
             }
         }
     }

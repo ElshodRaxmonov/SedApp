@@ -1,7 +1,7 @@
 package com.example.sedapp.presentation.dashboard.home
 
 
-import androidx.compose.foundation.background
+import android.app.Activity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,40 +14,53 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.sedapp.core.ui.theme.Charcoal
 import com.example.sedapp.core.ui.theme.SedAppOrange
 import com.example.sedapp.core.ui.theme.SedAppTheme
+import com.example.sedapp.core.ui.theme.SedAppYellow
+import com.example.sedapp.core.ui.theme.SoftGold
 import com.example.sedapp.core.ui.theme.WarmWhite
 import com.example.sedapp.core.ui.theme.White
 import com.example.sedapp.domain.model.Category
@@ -61,7 +74,9 @@ fun HomeScreen(
     onAllCategoriesClicked: () -> Unit,
     onAllRestaurantsClicked: () -> Unit,
     onCategoryClicked: (Category) -> Unit,
-    modifier: Modifier
+    onSavedFoodsClicked: () -> Unit,
+    modifier: Modifier = Modifier,
+    scrollState: LazyListState = rememberLazyListState(),
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -71,9 +86,12 @@ fun HomeScreen(
         onRestaurantClicked = onRestaurantClicked,
         onAllCategoriesClicked = onAllCategoriesClicked,
         onAllRestaurantsClicked = onAllRestaurantsClicked,
-        onCategoryClicked = onCategoryClicked
+        onCategoryClicked = onCategoryClicked,
+        onSavedFoodsClicked = onSavedFoodsClicked,
+        scrollState = scrollState
     )
 }
+
 
 @Composable
 fun HomeScreenContent(
@@ -82,26 +100,38 @@ fun HomeScreenContent(
     onRestaurantClicked: (String) -> Unit,
     onAllCategoriesClicked: () -> Unit,
     onAllRestaurantsClicked: () -> Unit,
-    onCategoryClicked: (Category) -> Unit = {}
+    onCategoryClicked: (Category) -> Unit = {},
+    onSavedFoodsClicked: () -> Unit = {},
+    scrollState: LazyListState = rememberLazyListState()
 ) {
+    // Set Status Bar Color to match Header (Orange) or Background (Charcoal)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            // Change this to SedAppOrange if you want it to match the header exactly
+            window.statusBarColor = Charcoal.toArgb()
+            WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = false
+        }
+    }
+
     Scaffold(
-        containerColor = White,
+        containerColor = Charcoal,
         topBar = {
             HomeHeader(
-                userName = state.userName,
                 greeting = state.greeting,
-
-                )
+                onSavedFoodsClicked = onSavedFoodsClicked
+            )
         }
     ) { paddingValues ->
         LazyColumn(
+            state = scrollState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // --- Search Bar ---
             item {
                 HomeSearchBar(onClick = onSearchClicked)
             }
@@ -109,15 +139,15 @@ fun HomeScreenContent(
             // --- Categories ---
             item {
                 Column {
-                    SectionHeader(
-                        title = "All Categories",
-                        onSeeAllClicked = onAllCategoriesClicked
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(state.categories) { category ->
-                            CategoryChip(category) {
-                                onCategoryClicked(category)
+                    SectionHeader(title = "All Categories", onSeeAllClicked = onAllCategoriesClicked)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (state.isLoading && state.categories.isEmpty()) {
+                        CircularProgressIndicator(color = SedAppOrange, modifier = Modifier.align(Alignment.CenterHorizontally))
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(state.categories) { category ->
+                                CategoryChip(category = category, categoryClicked = onCategoryClicked)
                             }
                         }
                     }
@@ -129,21 +159,23 @@ fun HomeScreenContent(
                 SectionHeader(title = "Open Restaurants", onSeeAllClicked = onAllRestaurantsClicked)
             }
 
-            if (state.isLoading) {
-                items(3) { 
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            } else if (state.restaurants.isEmpty()) {
+            if (state.isLoading && state.restaurants.isEmpty()) {
                 item {
-                    Text("No restaurants available right now.", modifier = Modifier.padding(16.dp))
+                    CircularProgressIndicator(
+                        color = SedAppOrange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .size(24.dp)
+                    )
                 }
             } else {
+                // FIXED: Use items() directly in the main LazyColumn
                 items(state.restaurants) { restaurant ->
                     RestaurantCard(
                         restaurant = restaurant,
-                        onClick = { onRestaurantClicked(restaurant.name) } // Fix: Passing name instead of ID to match Detail Screen expectations
+                        onClick = { onRestaurantClicked(restaurant.name) }
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
@@ -152,52 +184,78 @@ fun HomeScreenContent(
 
 @Composable
 fun HomeHeader(
-    userName: String?,
-    greeting: String
+    greeting: String,
+    onSavedFoodsClicked: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = SedAppOrange,
+            contentColor = Color.Black,
+            disabledContainerColor = White,
+            disabledContentColor = Color.Black
+        ),
+        elevation = CardDefaults.cardElevation(8.dp),
+        shape = RoundedCornerShape(24.dp, 24.dp, 64.dp, 24.dp),
+        modifier = Modifier.padding(top = 32.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            Icon(
-                painter = painterResource(com.example.sedapp.R.drawable.sedapp_logo),
-                contentDescription = "Logo",
-                tint = SedAppOrange,
-                modifier = Modifier.size(54.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            Column {
-                Text("SedApp", color = SedAppOrange, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Set your table up", fontSize = 12.sp, color = Color.Gray)
-            }
-            Spacer(Modifier.weight(1f))
-            IconButton(
-                modifier = Modifier.background(Color.Black),
-                shape = CircleShape,
-                onClick = {}
-
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 8.dp)
             ) {
                 Icon(
-                    painter = painterResource(com.example.sedapp.R.drawable.saved_foods),
-                    contentDescription = "Profile",
-                    modifier = Modifier.size(24.dp),
-                    tint = WarmWhite
+                    painter = painterResource(com.example.sedapp.R.drawable.sedapp_logo),
+                    contentDescription = "Logo",
+                    tint = SedAppYellow,
+                    modifier = Modifier.size(72.dp)
                 )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        "SedApp",
+                        color = SedAppYellow,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                    Text("Set your table up", fontSize = 12.sp, color = Color.White)
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(
+                    onClick = { onSavedFoodsClicked() },
+                    colors = IconButtonDefaults
+                        .iconButtonColors(containerColor = Color.Black),
+                    modifier = Modifier
+                        .size(40.dp)
+                        .shadow(
+                            elevation = 4.dp,
+                            shape = CircleShape,
+                        )
+
+                ) {
+                    Icon(
+                        painter = painterResource(com.example.sedapp.R.drawable.saved_foods),
+                        contentDescription = "Remarked",
+                        modifier = Modifier.padding(8.dp),
+                        tint = WarmWhite
+                    )
+                }
             }
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = greeting,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
         }
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = "Hey $userName, $greeting",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-        Spacer(Modifier.height(14.dp))
     }
 }
 
@@ -208,11 +266,11 @@ fun SectionHeader(title: String, onSeeAllClicked: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SoftGold)
         TextButton(onClick = onSeeAllClicked) {
             Text("See All", color = SedAppOrange)
             Icon(
-                Icons.Default.ArrowForward,
+                Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 tint = SedAppOrange,
                 modifier = Modifier.size(16.dp)
@@ -221,15 +279,35 @@ fun SectionHeader(title: String, onSeeAllClicked: () -> Unit) {
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun PreviewCard() {
+    RestaurantCard(
+        restaurant = Restaurant(
+            restaurantId = "1",
+            name = "Rose Garden",
+            cuisine = "Chinese • RM RM",
+            rating = 4.7,
+            images = emptyList(),
+            location = "123 Main St",
+            description = "This is a description"
+        ),
+        onClick = {
+
+        }
+    )
+}
+
 @Composable
 fun RestaurantCard(
-                   restaurant: Restaurant, onClick: () -> Unit) {
+    restaurant: Restaurant, onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(32.dp),
+        colors = CardDefaults.cardColors(containerColor = WarmWhite),
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column {
@@ -240,7 +318,8 @@ fun RestaurantCard(
                 error = ColorPainter(Color.LightGray),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp).clip(
+                    .height(160.dp)
+                    .clip(
                         RoundedCornerShape(24.dp)
                     ),
                 contentScale = ContentScale.Crop
@@ -251,30 +330,39 @@ fun RestaurantCard(
                     .padding(16.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(restaurant.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(
+                        restaurant.name, fontWeight = FontWeight.Bold, fontSize = 18.sp,
+                        color = Color.Black,
+                        maxLines = 1,
+                        letterSpacing = 0.1.em
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(restaurant.cuisine, color = Color.Gray, fontSize = 14.sp)
+                    Text(
+                        restaurant.cuisine.replace("$", "RM"),
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .background(Color(0xFFFFF8E1), RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Icon(
                         Icons.Default.Star,
                         contentDescription = "Rating",
                         tint = Color(0xFFFFC107),
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = restaurant.rating.toString(),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        color = Color.Black
                     )
                 }
             }
@@ -291,7 +379,7 @@ fun HomeSearchBar(onClick: () -> Unit) {
             .height(56.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFF0F5FA),
+        color = SoftGold,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -318,7 +406,7 @@ fun PreviewHomeScreen() {
             Restaurant(
                 restaurantId = "1",
                 name = "Rose Garden",
-                cuisine = "Chinese • $$",
+                cuisine = "Chinese • RM RM",
                 rating = 4.7,
                 images = emptyList(),
                 location = "123 Main St",
@@ -327,7 +415,7 @@ fun PreviewHomeScreen() {
             Restaurant(
                 restaurantId = "2",
                 name = "Burger King",
-                cuisine = "Fastfood • $",
+                cuisine = "Fastfood • RM",
                 rating = 4.2,
                 images = emptyList(),
                 location = "456 Broad St",
@@ -337,7 +425,6 @@ fun PreviewHomeScreen() {
         val state = HomeUiState(
             categories = categories,
             restaurants = restaurants,
-            userName = "Elshod",
             greeting = "Good Morning!"
         )
 
@@ -346,7 +433,8 @@ fun PreviewHomeScreen() {
             onSearchClicked = {},
             onRestaurantClicked = {},
             onAllCategoriesClicked = {},
-            onAllRestaurantsClicked = {}
+            onAllRestaurantsClicked = {},
+            onSavedFoodsClicked = {}
         )
     }
 }

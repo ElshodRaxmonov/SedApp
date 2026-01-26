@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +40,8 @@ fun CategoryChip(
         shape = RoundedCornerShape(100, 40, 60, 20),
         colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = WarmWhite),
         modifier = Modifier.height(44.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        onClick = { categoryClicked(category) }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -61,7 +63,12 @@ fun CategoryChip(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Text(category.name, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            Text(
+                category.name,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = Color.Black
+            )
         }
     }
 }
@@ -84,7 +91,7 @@ private fun getIconForCategory(iconName: String): Int {
 fun PreviewCategory() {
     SedAppTheme {
         CategoryChip(
-            Category(1, "Meal",false) // Pass a string to match the data model{
+            Category(1, "Meal", false) // Pass a string to match the data model{
             , categoryClicked = {}
         )
     }

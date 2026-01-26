@@ -1,5 +1,10 @@
 package com.example.sedapp.core.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -15,6 +20,7 @@ import com.example.sedapp.presentation.main.MainUiState
 import com.example.sedapp.presentation.main.MainViewModel
 import com.example.sedapp.presentation.splashscreen.SplashScreen
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavHost(
     modifier: Modifier = Modifier,
@@ -37,7 +43,10 @@ fun AppNavHost(
             NavHost(
                 modifier = modifier,
                 navController = navController,
-                startDestination = startDestination
+                startDestination = startDestination,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) }
+
             ) {
                 onboardingGraph(navController)
                 authGraph(navController)

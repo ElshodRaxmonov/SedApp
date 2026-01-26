@@ -1,5 +1,6 @@
 package com.example.sedapp.presentation.dashboard.home.foods
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sedapp.domain.model.Category
@@ -9,6 +10,8 @@ import com.example.sedapp.domain.usecase.bag.AddItemToBagUseCase
 import com.example.sedapp.domain.usecase.bag.ObserveBagItemsUseCase
 import com.example.sedapp.domain.usecase.bag.UpdateItemQuantityUseCase
 import com.example.sedapp.domain.usecase.home.food.GetFoodsUseCase
+import com.example.sedapp.domain.usecase.home.food.GetLikedFoodsUseCase
+import com.example.sedapp.domain.usecase.home.food.ToggleLikeFoodUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,7 +24,8 @@ import javax.inject.Inject
 
 data class FoodItemState(
     val food: Food,
-    val quantity: Int = 0
+    val quantity: Int = 0,
+    val isLiked: Boolean = false
 )
 
 data class FoodUiState(
@@ -39,7 +43,10 @@ class FoodViewModel @Inject constructor(
     private val getCategoriesUseCase: GetCategoriesUseCase,
     private val addItemToBagUseCase: AddItemToBagUseCase,
     private val observeBagItemsUseCase: ObserveBagItemsUseCase,
-    private val updateItemQuantityUseCase: UpdateItemQuantityUseCase
+    private val updateItemQuantityUseCase: UpdateItemQuantityUseCase,
+    private val getLikedFoodsUseCase: GetLikedFoodsUseCase,
+    private val toggleLikeFoodUseCase: ToggleLikeFoodUseCase,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _allFoods = MutableStateFlow<List<Food>>(emptyList())
@@ -55,19 +62,27 @@ class FoodViewModel @Inject constructor(
         _allFoods,
         _categories,
         _filterState,
-        observeBagItemsUseCase()
-    ) { foods, categories, filters, bagItems ->
+        observeBagItemsUseCase(),
+        getLikedFoodsUseCase()
+    ) { foods, categories, filters, bagItems, likedFoods ->
         val bagMap = bagItems.associateBy({ it.food.foodId }, { it.quantity })
-        
+        val likedSet = likedFoods.map { it.foodId }.toSet()
+
         val filteredFoods = foods.filter { food ->
             val matchesHalal = !filters.isHalalOnly || food.isHalal
-            val matchesCategory = filters.selectedCategories.isEmpty() || food.category in filters.selectedCategories
+            val matchesCategory =
+                filters.selectedCategories.isEmpty() || food.category in filters.selectedCategories
             matchesHalal && matchesCategory
-        }.map { FoodItemState(it, bagMap[it.foodId] ?: 0) }
+        }.map { FoodItemState(it, bagMap[it.foodId] ?: 0, it.foodId in likedSet) }
+
+        // Map categories to show their selection state in the UI
+        val categoriesWithSelection = categories.map { category ->
+            category.copy(isCategorySelected = category.name in filters.selectedCategories)
+        }
 
         FoodUiState(
             isLoading = false,
-            availableCategories = categories,
+            availableCategories = categoriesWithSelection,
             displayedFoods = filteredFoods,
             selectedCategoryNames = filters.selectedCategories,
             isHalalOnly = filters.isHalalOnly
@@ -76,6 +91,12 @@ class FoodViewModel @Inject constructor(
 
     init {
         loadInitialData()
+        // Check for category passed from navigation
+        savedStateHandle.get<String>("categoryName")?.let { name ->
+            if (name.isNotEmpty()) {
+                onCategorySelected(name)
+            }
+        }
     }
 
     private fun loadInitialData() {
@@ -104,15 +125,33 @@ class FoodViewModel @Inject constructor(
         _filterState.update { it.copy(isHalalOnly = isHalal) }
     }
 
+    fun onIncrement(food: Food, currentQty: Int) {
+        viewModelScope.launch {
+            if (currentQty == 0) {
+                addItemToBagUseCase(food, 1)
+            } else {
+                updateItemQuantityUseCase(food.foodId, 1)
+            }
+        }
+    }
+
+    fun onDecrement(food: Food, currentQty: Int) {
+        viewModelScope.launch {
+            if (currentQty > 0) {
+                updateItemQuantityUseCase(food.foodId, -1)
+            }
+        }
+    }
+
     fun addToBag(food: Food, quantity: Int) {
         viewModelScope.launch {
             addItemToBagUseCase(food, quantity)
         }
     }
 
-    fun updateQuantity(foodId: String, delta: Int, currentQty: Int) {
+    fun toggleLike(food: Food, isLiked: Boolean) {
         viewModelScope.launch {
-            updateItemQuantityUseCase(foodId, currentQty + delta)
+            toggleLikeFoodUseCase(food, isLiked)
         }
     }
 }

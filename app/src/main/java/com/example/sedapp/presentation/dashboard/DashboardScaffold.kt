@@ -1,72 +1,122 @@
-// ... other imports
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.sedapp.R
 import com.example.sedapp.core.navigation.Routes
-
-// ... other imports
+import com.example.sedapp.core.ui.theme.SedAppOrange
+import com.example.sedapp.core.ui.theme.SoftGold
+import com.example.sedapp.core.ui.theme.WarmWhite
+import com.example.sedapp.presentation.dashboard.bag.BagViewModel
+import com.example.sedapp.presentation.dashboard.component.AnimatedNavigationBar
+import com.example.sedapp.presentation.dashboard.component.ButtonData
 
 @Composable
 fun DashboardScaffold(
     navController: NavHostController,
-    content: @Composable (PaddingValues) -> Unit
+    bagViewModel: BagViewModel = hiltViewModel(),
+    content: @Composable (PaddingValues, LazyListState) -> Unit
 ) {
-    val items = listOf(
-        Routes.HOME,
-        Routes.BAG,
-        Routes.ORDERS,
-        Routes.PROFILE
-    )
+    val bagState by bagViewModel.uiState.collectAsStateWithLifecycle()
+    val totalItemsInBag = remember(bagState.items) {
+        bagState.items.size
+    }
 
-    Scaffold(
-        containerColor = Color.White,
-        bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+    val items = remember {
+        listOf(
+            Routes.HOME to R.drawable.home_icon,
+            Routes.BAG to R.drawable.bag,
+            Routes.ORDERS to R.drawable.orders,
+            Routes.PROFILE to R.drawable.frame
+        )
+    }
 
-                items.forEach { route ->
-                    NavigationBarItem(
-                        selected = currentDestination
-                            ?.hierarchy
-                            ?.any { it.route == route } == true,
-                        onClick = {
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                painter = when (route) {
-                                    Routes.HOME -> painterResource(R.drawable.home_icon)
-                                    Routes.BAG -> painterResource(R.drawable.bag)
-                                    Routes.PROFILE -> painterResource(R.drawable.frame)
-                                    Routes.ORDERS -> painterResource(R.drawable.orders)
-                                    else -> painterResource(R.drawable.home_icon)
-                                },
-                                contentDescription = null
-                            )
-                        }
-                    )
-                }
-            }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    var selectedIndex by rememberSaveable(currentDestination) {
+        val index = items.indexOfFirst { (route, _) ->
+            currentDestination?.hierarchy?.any { it.route == route } == true
         }
-    ) { padding ->
-        content(padding)
+        mutableIntStateOf(if (index != -1) index else 0)
+    }
+
+    val listState = rememberLazyListState()
+
+    val shouldHideBottomBar by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 ||
+                    listState.firstVisibleItemScrollOffset > 24
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = Color.White
+        ) { paddingValues ->
+            content(paddingValues, listState)
+        }
+
+        AnimatedVisibility(
+            visible = !shouldHideBottomBar,
+            enter = slideInVertically { it },
+            exit = slideOutVertically { it },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+        ) {
+            AnimatedNavigationBar(
+                buttons = items.map { (route, icon) ->
+                    ButtonData(
+                        text = route.lowercase().replaceFirstChar { it.uppercase() },
+                        icon = icon,
+                        badgeCount = if (route == Routes.BAG) totalItemsInBag else 0
+                    )
+                },
+                selectedItem = selectedIndex,
+                onItemSelected = { index ->
+                    selectedIndex = index
+                    val route = items[index].first
+
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                barColor = SedAppOrange,
+                circleColor = SedAppOrange,
+                selectedColor = SoftGold,
+                unselectedColor = WarmWhite,
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                    .navigationBarsPadding()
+            )
+        }
     }
 }

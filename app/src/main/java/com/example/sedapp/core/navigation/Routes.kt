@@ -15,14 +15,16 @@ object Routes {
 
     // Dashboard
     const val HOME = "home"
-    const val BAG  = "bag"
+    const val BAG = "bag"
     const val ORDERS = "orders"
     const val PROFILE = "profile"
 
     // Functional Screens
     const val SEARCH = "search"
     const val FOODS = "foods"
+    const val SAVED_FOODS = "saved_foods"
     const val RESTAURANT = "restaurant"
     const val RESTAURANT_DETAILS = "restaurant_details"
     const val PAYMENT = "payment"
+    const val PAYMENT_PAID = "payment_completed"
 }

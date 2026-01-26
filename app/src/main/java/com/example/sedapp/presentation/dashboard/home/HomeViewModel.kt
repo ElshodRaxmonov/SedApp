@@ -19,14 +19,15 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "Home Screen"
+
 data class HomeUiState(
     val isLoading: Boolean = false,
     val categories: List<Category> = emptyList(),
     val restaurants: List<Restaurant> = emptyList(),
-    val userName: String? = "",
     val greeting: String = "",
     val errorMessage: String? = null
 )
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getCategoriesUseCase: GetCategoriesUseCase,
@@ -47,22 +48,18 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {
+
                 val user = getCurrentUserUseCase()
-                val greeting = getGreetingUseCase()
+                val greeting = getGreetingUseCase(username = user?.name)
+                val categories = async { getCategoriesUseCase() }.await()
+                val restaurants = async { getTopRestaurantsUseCase() }.await()
+                _uiState.value = HomeUiState(
+                    isLoading = false,
+                    categories = categories,
+                    restaurants = restaurants,
+                    greeting = greeting
+                )
 
-                coroutineScope {
-                    val categories = async { getCategoriesUseCase() }
-                    val restaurants = async { getTopRestaurantsUseCase() }
-                    Log.d("HomeViewModel", "Restaurants fetched: $restaurants")
-
-                    _uiState.value = HomeUiState(
-                        isLoading = false,
-                        categories = categories.await(),
-                        restaurants = restaurants.await(),
-                        userName = user?.name ?: "Guest",
-                        greeting = greeting
-                    )
-                }
 
             } catch (e: CancellationException) {
                 throw e

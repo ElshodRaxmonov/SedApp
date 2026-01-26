@@ -12,4 +12,5 @@ interface BagRepository {
     suspend fun removeItem(foodId: String)
     suspend fun clearBag()
     suspend fun placeOrder(order: Order)
+
 }

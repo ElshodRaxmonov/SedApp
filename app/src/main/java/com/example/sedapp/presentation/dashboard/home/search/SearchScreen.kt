@@ -1,11 +1,9 @@
 package com.example.sedapp.presentation.dashboard.home.search
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,28 +14,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -58,11 +52,14 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
+import com.example.sedapp.core.ui.theme.Charcoal
 import com.example.sedapp.core.ui.theme.SedAppOrange
+import com.example.sedapp.core.ui.theme.SoftGold
+import com.example.sedapp.core.ui.theme.WarmWhite
 import com.example.sedapp.domain.model.Food
 import com.example.sedapp.presentation.dashboard.component.FoodItem
+import com.example.sedapp.presentation.dashboard.component.SedAppTopBar
 import com.example.sedapp.presentation.dashboard.home.RestaurantCard
-import com.example.sedapp.presentation.dashboard.home.foods.FoodDetailsSheet
 import com.example.sedapp.presentation.dashboard.home.foods.FoodViewModel
 import kotlinx.coroutines.launch
 
@@ -75,16 +72,28 @@ fun SearchScreen(
     onRestaurantClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val foodUiState by foodViewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     var selectedFood by remember { mutableStateOf<Food?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
+    // Map food IDs to their current bag quantities and like status for reactive updates
+    val quantities = remember(foodUiState.displayedFoods) {
+        foodUiState.displayedFoods.associate { it.food.foodId to it.quantity }
+    }
+    val likedFoods = remember(foodUiState.displayedFoods) {
+        foodUiState.displayedFoods.associate { it.food.foodId to it.isLiked }
+    }
+
     Scaffold(
         topBar = {
-            SearchTopBar(onBackClicked = onBackClicked)
+            SedAppTopBar(
+                title = "Search",
+                onBackClicked = onBackClicked
+            )
         },
-        containerColor = Color.White
+        containerColor = Charcoal
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -101,6 +110,7 @@ fun SearchScreen(
                     viewModel.performSearch()
                     focusManager.clearFocus()
                 }
+
             )
 
             Spacer(Modifier.height(24.dp))
@@ -109,7 +119,7 @@ fun SearchScreen(
                 when (val state = uiState) {
                     is SearchUiState.Idle -> {
                         SearchAnimationContent(
-                            animationRes = "raw/search_initial.json",
+                            animationRes = "raw/onboarding_animation.json",
                             title = "Search for food or restaurants",
                             subtitle = "Explore the best meals around you"
                         )
@@ -133,11 +143,16 @@ fun SearchScreen(
                     is SearchUiState.Success -> {
                         SearchSuccessContent(
                             uiState = state,
+                            quantities = quantities,
+                            likedFoods = likedFoods,
                             onRestaurantClick = onRestaurantClick,
                             onFoodClick = { food ->
                                 selectedFood = food
                                 scope.launch { sheetState.show() }
-                            }
+                            },
+                            onIncrement = foodViewModel::onIncrement,
+                            onDecrement = foodViewModel::onDecrement,
+                            onToggleLike = foodViewModel::toggleLike
                         )
                     }
                 }
@@ -145,86 +160,20 @@ fun SearchScreen(
         }
     }
 
-    if (selectedFood != null) {
-        ModalBottomSheet(
-            onDismissRequest = { selectedFood = null },
-            sheetState = sheetState,
-            containerColor = Color.White,
-            dragHandle = {
-                Box(
-                    modifier = Modifier
-                        .padding(vertical = 12.dp)
-                        .size(width = 40.dp, height = 4.dp)
-                        .background(Color.LightGray, RoundedCornerShape(2.dp))
-                )
-            }
-        ) {
-            FoodDetailsSheet(
-                food = selectedFood!!,
-                onAddToCart = { qty ->
-                    foodViewModel.addToBag(selectedFood!!, qty)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        selectedFood = null
-                    }
-                }
-            )
-        }
-    }
+
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SearchTopBar(onBackClicked: () -> Unit) {
-    TopAppBar(
-        title = {
-            Text(
-                "Search",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.Black
-            )
-        },
-        navigationIcon = {
-            IconButton(
-                onClick = onBackClicked,
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .background(Color(0xFFF0F2F5), CircleShape)
-                    .size(40.dp)
-            ) {
-                Icon(
-                    Icons.Default.ArrowBackIosNew,
-                    contentDescription = "Back",
-                    modifier = Modifier.size(18.dp),
-                    tint = Color.Black
-                )
-            }
-        },
-        actions = {
-            IconButton(
-                onClick = { /* Open Saved */ },
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .background(Color(0xFF1B2130), CircleShape)
-                    .size(40.dp)
-            ) {
-                Icon(
-                    Icons.Default.BookmarkBorder,
-                    contentDescription = "Saved",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-    )
-}
 
 @Composable
 private fun SearchSuccessContent(
     uiState: SearchUiState.Success,
+    quantities: Map<String, Int>,
+    likedFoods: Map<String, Boolean>,
     onRestaurantClick: (String) -> Unit,
-    onFoodClick: (Food) -> Unit
+    onFoodClick: (Food) -> Unit,
+    onIncrement: (Food, Int) -> Unit,
+    onDecrement: (Food, Int) -> Unit,
+    onToggleLike: (Food, Boolean) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -243,8 +192,18 @@ private fun SearchSuccessContent(
                         contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         items(uiState.foods) { food ->
+                            val currentQty = quantities[food.foodId] ?: 0
+                            val isLiked = likedFoods[food.foodId] ?: false
                             Box(modifier = Modifier.width(160.dp)) {
-                                FoodItem(food = food, onFoodClicked = onFoodClick)
+                                FoodItem(
+                                    food = food,
+                                    quantity = currentQty,
+                                    isLiked = isLiked,
+                                    onFoodClicked = onFoodClick,
+                                    onIncrement = { onIncrement(food, currentQty) },
+                                    onDecrement = { onDecrement(food, currentQty) },
+                                    onToggleLike = { onToggleLike(food, isLiked) }
+                                )
                             }
                         }
                     }
@@ -276,7 +235,7 @@ private fun SectionTitle(title: String) {
         text = title,
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold,
-        color = Color.Black
+        color = SoftGold
     )
 }
 
@@ -305,21 +264,21 @@ fun SearchTextField(
         trailingIcon = {
             if (value.isNotEmpty()) {
                 IconButton(onClick = { onValueChange("") }) {
-                    Icon(Icons.Default.Cancel, contentDescription = "Clear", tint = Color.LightGray)
+                    Icon(Icons.Default.Cancel, contentDescription = "Clear", tint = Color.Gray)
                 }
             }
         },
+        shape = RoundedCornerShape(12.dp),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = SoftGold,
+            unfocusedContainerColor = SoftGold,
+            disabledContainerColor = SoftGold,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSearchAction() }),
-        shape = RoundedCornerShape(12.dp),
-        singleLine = true,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color(0xFFF6F6F6),
-            unfocusedContainerColor = Color(0xFFF6F6F6),
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = SedAppOrange
-        )
+        singleLine = true
     )
 }
 
@@ -343,22 +302,28 @@ fun SearchAnimationContent(
         LottieAnimation(
             composition = composition,
             progress = { progress },
-            modifier = Modifier.size(280.dp)
+            modifier = Modifier.size(200.dp)
         )
 
-        Spacer(Modifier.height(24.dp))
-
+        Spacer(Modifier.height(16.dp))
         Text(
             text = title,
-            fontSize = 22.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = SoftGold
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = subtitle,
             fontSize = 14.sp,
-            color = Color.Gray
+            color = WarmWhite
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SearchScreenPreview() {
+
+
 }

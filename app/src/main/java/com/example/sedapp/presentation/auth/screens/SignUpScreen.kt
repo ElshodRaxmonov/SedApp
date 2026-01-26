@@ -2,18 +2,44 @@ package com.example.sedapp.presentation.auth.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import com.example.sedapp.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -26,12 +52,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.sedapp.presentation.auth.AuthViewModel
-import com.example.sedapp.presentation.auth.AuthUiState
-import com.example.sedapp.core.ui.theme.BackgroundPale
+import com.example.sedapp.R
 import com.example.sedapp.core.ui.theme.DeepOrange
 import com.example.sedapp.core.ui.theme.PrimaryOrange
 import com.example.sedapp.core.ui.theme.TextFieldBackground
+import com.example.sedapp.presentation.auth.AuthUiState
+import com.example.sedapp.presentation.auth.AuthViewModel
 
 @Composable
 fun SignUpScreen(
@@ -48,24 +74,26 @@ fun SignUpScreen(
     // State for password visibility toggles
     var passwordVisible by remember { mutableStateOf(false) }
     var retypePasswordVisible by remember { mutableStateOf(false) }
-    
+
     val authState by viewModel.state.collectAsStateWithLifecycle()
-    
+
     // Handle auth state changes
     LaunchedEffect(authState) {
         when (authState) {
             is AuthUiState.Success -> {
                 onSignUpSuccess()
             }
+
             is AuthUiState.Error -> {
                 // Error is shown via Snackbar below
             }
+
             else -> {}
         }
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     // Show error snackbar
     LaunchedEffect(authState) {
         if (authState is AuthUiState.Error) {
@@ -75,10 +103,10 @@ fun SignUpScreen(
             )
         }
     }
-    
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = BackgroundPale,
+        containerColor = DeepOrange,
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         }
@@ -145,113 +173,113 @@ fun SignUpScreen(
             }
 
             // 2. Main Content Area (White Card Look)
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.65f)
-                    .offset(y = (-40).dp) // Pull the content up over the curve
-                    .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
+                    .weight(0.65f) // Pull the content up over the curve
+                    .clip(RoundedCornerShape(topEnd = 40.dp, topStart = 40.dp))
                     .background(Color.White)
                     .padding(horizontal = 24.dp, vertical = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Name Field
+                item {
+                    CustomFlatTextField(
+                        titleField = "NAME",
+                        value = name,
+                        onValueChange = { name = it },
+                        placeholder = "john doe",
+                        keyboardType = KeyboardType.Text
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                CustomFlatTextField(
-                    titleField = "NAME",
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = "john doe",
-                    keyboardType = KeyboardType.Text
-                )
-                Spacer(modifier = Modifier.height(16.dp))
 
+                    CustomFlatTextField(
+                        titleField = "EMAIL",
+                        value = email,
+                        onValueChange = { email = it },
+                        placeholder = "example@gmail.com",
+                        keyboardType = KeyboardType.Email
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                CustomFlatTextField(
-                    titleField = "EMAIL",
-                    value = email,
-                    onValueChange = { email = it },
-                    placeholder = "example@gmail.com",
-                    keyboardType = KeyboardType.Email
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Password Field
-                CustomFlatTextField(
-                    titleField = "PASSWORD",
-                    value = password,
-                    onValueChange = { password = it },
-                    placeholder = "••••••••",
-                    keyboardType = KeyboardType.Password,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        PasswordVisibilityToggle(passwordVisible) {
-                            passwordVisible = it
+                    // Password Field
+                    CustomFlatTextField(
+                        titleField = "PASSWORD",
+                        value = password,
+                        onValueChange = { password = it },
+                        placeholder = "••••••••",
+                        keyboardType = KeyboardType.Password,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            PasswordVisibilityToggle(passwordVisible) {
+                                passwordVisible = it
+                            }
                         }
-                    }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Re-type Password Field
-                CustomFlatTextField(
-                    titleField = "RE-TYPE PASSWORD",
-                    value = retypePassword,
-                    onValueChange = { retypePassword = it },
-                    placeholder = "••••••••",
-                    keyboardType = KeyboardType.Password,
-                    visualTransformation = if (retypePasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        PasswordVisibilityToggle(retypePasswordVisible) {
-                            retypePasswordVisible = it
+                    // Re-type Password Field
+                    CustomFlatTextField(
+                        titleField = "RE-TYPE PASSWORD",
+                        value = retypePassword,
+                        onValueChange = { retypePassword = it },
+                        placeholder = "••••••••",
+                        keyboardType = KeyboardType.Password,
+                        visualTransformation = if (retypePasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            PasswordVisibilityToggle(retypePasswordVisible) {
+                                retypePasswordVisible = it
+                            }
                         }
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // Sign Up Button
+                    val isLoading = authState is AuthUiState.Loading
+                    val passwordsMatch = password == retypePassword
+                    val isFormValid = name.isNotBlank() && email.isNotBlank() &&
+                            password.isNotBlank() && retypePassword.isNotBlank() && passwordsMatch
+
+                    if (!passwordsMatch && retypePassword.isNotBlank()) {
+                        Text(
+                            text = "Passwords do not match",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
                     }
-                )
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Sign Up Button
-                val isLoading = authState is AuthUiState.Loading
-                val passwordsMatch = password == retypePassword
-                val isFormValid = name.isNotBlank() && email.isNotBlank() && 
-                    password.isNotBlank() && retypePassword.isNotBlank() && passwordsMatch
-                
-                if (!passwordsMatch && retypePassword.isNotBlank()) {
-                    Text(
-                        text = "Passwords do not match",
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
+                    Button(
+                        onClick = {
+                            if (isFormValid && !isLoading) {
+                                viewModel.signUpWithEmail(name, email, password)
+                            }
+                        },
+                        enabled = isFormValid && !isLoading,
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    )
-                }
-                
-                Button(
-                    onClick = { 
-                        if (isFormValid && !isLoading) {
-                            viewModel.signUpWithEmail(name, email, password)
+                            .height(56.dp)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "SIGN UP",
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
-                    },
-                    enabled = isFormValid && !isLoading,
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryOrange),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text(
-                            text = "SIGN UP",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
                     }
                 }
             }
@@ -277,7 +305,8 @@ fun CustomFlatTextField(
                 .fillMaxWidth()
                 .padding(bottom = 4.dp),
             fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Black
         )
         TextField(
             value = value,

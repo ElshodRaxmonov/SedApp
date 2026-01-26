@@ -24,12 +24,9 @@ class UpdateItemQuantityUseCase @Inject constructor(
     private val repository: BagRepository
 ) {
     suspend operator fun invoke(foodId: String, newQuantity: Int) {
-        if (newQuantity > 0) {
-            repository.updateQuantity(foodId, newQuantity)
-        } else {
-            repository.removeItem(foodId)
-        }
+        repository.updateQuantity(foodId, newQuantity)
     }
+
 }
 
 class RemoveItemUseCase @Inject constructor(

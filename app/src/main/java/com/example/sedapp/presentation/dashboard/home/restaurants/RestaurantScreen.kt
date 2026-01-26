@@ -1,10 +1,7 @@
 package com.example.sedapp.presentation.dashboard.home.restaurants
 
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,31 +12,31 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.sedapp.R
+import com.example.sedapp.core.ui.theme.Charcoal
+import com.example.sedapp.core.ui.theme.SedAppOrange
+import com.example.sedapp.core.ui.theme.SoftGold
+import com.example.sedapp.core.ui.theme.WarmWhite
 import com.example.sedapp.domain.model.Restaurant
+import com.example.sedapp.presentation.dashboard.component.SedAppTopBar
 import com.example.sedapp.presentation.dashboard.home.RestaurantCard
-import com.example.sedapp.presentation.dashboard.home.foods.FoodScreenContent
 
 @Preview(showBackground = true)
 @Composable
@@ -58,8 +55,7 @@ fun RestaurantScreenPreview() {
                 cuisine = "Central Asian",
                 listOf("Image URL 1", "Image URL 2"),
                 description = "This is a description"
-            ),
-            Restaurant(
+            ), Restaurant(
                 "Restaurant 1",
                 "Location 1",
                 4.5,
@@ -67,8 +63,7 @@ fun RestaurantScreenPreview() {
                 cuisine = "Chinese",
                 listOf("Image URL 1", "Image URL 2"),
                 description = "This is a description"
-            ),
-            Restaurant(
+            ), Restaurant(
                 "Restaurant 1",
                 "Location 1",
                 4.5,
@@ -85,8 +80,7 @@ fun RestaurantScreenPreview() {
         state = state,
         onBackClicked = {},
         onCuisineSelected = {},
-        onRestaurantClick = {}
-    )
+        onRestaurantClick = {})
 }
 
 @Composable
@@ -120,18 +114,11 @@ fun RestaurantScreenContent(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Restaurants") }, navigationIcon = {
-                IconButton(onClick = onBackClicked) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
-            }, actions = {
-                Image(
-                    painter = painterResource(id = R.drawable.sedapp_logo_grey),
-                    contentDescription = "SedApp icon",
-                    modifier = Modifier.padding(end = 16.dp)
-                )
-            })
-        }
+            SedAppTopBar(
+                title = "Restaurants", onBackClicked = onBackClicked
+            )
+        },
+        containerColor = Charcoal
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -139,9 +126,15 @@ fun RestaurantScreenContent(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Cuisines",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = SoftGold
+            )
             LazyRow(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(state.availableCuisines) { cuisine ->
                     val isSelected = cuisine in state.selectedCuisines
@@ -159,7 +152,19 @@ fun RestaurantScreenContent(
                             }
                         } else {
                             null
-                        })
+                        },
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = SedAppOrange,
+                            selected = false,
+                            enabled = true
+                        ),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = SedAppOrange,
+                            selectedLabelColor = Color.White,
+                            selectedLeadingIconColor = Color.White,
+                            labelColor = WarmWhite, disabledContainerColor = SedAppOrange
+
+                        ))
                 }
             }
             // Top Bar
