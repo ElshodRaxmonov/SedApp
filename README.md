@@ -4,7 +4,7 @@ SedApp is a modern Android application built with a dark-first design and a scal
 
 ## 🖼️ Screenshots
 
-<img src="screen_one-portrait.png" width="300" alt="SedApp Screenshot" />  <img src="screen_two-portrait.png" width="300" alt="SedApp Screenshot" />  <img src="screen_three-portrait.png" width="300" alt="SedApp Screenshot" />
+<img src="screen_one-portrait.png" width="250" alt="SedApp Screenshot" />  <img src="screen_two-portrait.png" width="250" alt="SedApp Screenshot" />  <img src="screen_three-portrait.png" width="250" alt="SedApp Screenshot" />
 
 ## ✨ Features
 
